@@ -1,0 +1,16 @@
+[package]
+name = "nimg"
+version = "0.1.0"
+edition = "2021"
+description = "A terminal image viewer based on Rust"
+readme = "README.md"
+homepage = "https://nasyt.hoha.top"
+repository = "https://github.com/nasyt233/nimg"
+license = "MIT OR Apache-2.0"
+keywords = ["image", "nasyt", "terminal",]
+
+[dependencies]
+ratatui = "0.26"
+crossterm = "0.27"
+image = "0.24"
+anyhow = "1.0"

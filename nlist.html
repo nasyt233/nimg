@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>目录树 - nlist</title>
+<style>
+/* ========== 全局样式 ========== */
+html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-size: cover;
+    background-position: center;
+}
+body {
+    background: url('https://www.loliapi.com/acg/') no-repeat center center fixed;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+.container {
+    max-width: 900px;
+    margin: 20px auto;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    backdrop-filter: blur(15px) saturate(180%);
+    -webkit-backdrop-filter: blur(15px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: background 0.3s, backdrop-filter 0.3s;
+}
+
+/* ========== 顶栏 ========== */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.theme-btn {
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 30px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s;
+    color: #333;
+}
+.theme-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+}
+
+/* ========== 统计信息 ========== */
+.stats {
+    margin: 10px 0 20px 0;
+    font-size: 0.95em;
+    color: #555;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.stats-item {
+    background: rgba(255, 255, 255, 0.5);
+    padding: 6px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ========== 项目简介卡片 ========== */
+.project-info {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.project-info h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.8em;
+}
+.project-info p {
+    margin-bottom: 0;
+    color: #555;
+    line-height: 1.6;
+}
+
+/* ========== README 卡片 ========== */
+.readme-card {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.readme-card h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+}
+.readme-content {
+    overflow-x: auto;
+    color: #333;
+}
+.readme-content pre {
+    background: rgba(0,0,0,0.05);
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+.readme-content code {
+    background: rgba(0,0,0,0.05);
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+/* ========== 树形列表 ========== */
+.tree-root {
+    list-style: none;
+    padding-left: 0;
+}
+.tree-root ul {
+    list-style: none;
+    padding-left: 20px;
+    margin: 5px 0;
+    position: relative;
+}
+.tree-root ul::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(44, 130, 201, 0.3), rgba(44, 130, 201, 0.1));
+    border-left: 1px dashed #2c82c9;
+}
+.tree-root li {
+    margin: 4px 0;
+    position: relative;
+}
+.tree-root .entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s;
+    text-decoration: none;
+    color: #333;
+}
+.tree-root .folder-entry {
+    background: rgba(225, 240, 255, 0.8);
+    font-weight: 600;
+    border-left: 4px solid #2c82c9;
+}
+details[open] > summary.folder-entry {
+    background: rgba(180, 215, 255, 0.9);
+    border-left: 6px solid #1a5a9c;
+    font-weight: 700;
+}
+.tree-root .file-entry {
+    background: rgba(245, 245, 245, 0.8);
+}
+.tree-root .entry:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.tree-root .folder-entry:hover {
+    background: rgba(200, 225, 255, 0.9);
+}
+.tree-root .file-entry:hover {
+    background: rgba(225, 235, 255, 0.9);
+}
+.file-info {
+    color: #666;
+    font-size: 0.85em;
+    margin-left: 15px;
+    white-space: nowrap;
+}
+
+/* 折叠按钮动画 */
+details > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    outline: none;
+}
+details > summary::-webkit-details-marker {
+    display: none;
+}
+details > summary::before {
+    content: '▶';
+    margin-right: 8px;
+    font-size: 0.8em;
+    transition: transform 0.3s ease-in-out;
+    color: #2c82c9;
+}
+details[open] > summary::before {
+    transform: rotate(90deg);
+}
+details[open] ~ ul,
+details[open] ul {
+    animation: fadeIn 0.4s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.icon {
+    margin-right: 8px;
+    font-size: 1.2em;
+}
+a {
+    color: #2c82c9;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+h1 {
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+hr {
+    border: none;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    margin: 20px 0;
+}
+
+/* ========== 夜间模式 ========== */
+body.night-mode {
+    background: #1a1a1a;
+}
+body.night-mode .container {
+    background: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(15px) saturate(180%);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #eee;
+}
+body.night-mode .project-info,
+body.night-mode .readme-card {
+    background: rgba(40, 40, 40, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+body.night-mode .project-info h2,
+body.night-mode .project-info p,
+body.night-mode .readme-card h3,
+body.night-mode .readme-content {
+    color: #eee;
+}
+body.night-mode .readme-content pre,
+body.night-mode .readme-content code {
+    background: rgba(255,255,255,0.1);
+}
+body.night-mode .stats-item {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+}
+body.night-mode h1,
+body.night-mode .top-bar,
+body.night-mode .theme-btn {
+    color: #eee;
+}
+body.night-mode .theme-btn {
+    background: rgba(50, 50, 50, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+body.night-mode .tree-root .folder-entry {
+    background: rgba(40, 60, 80, 0.8);
+    border-left-color: #5a9acf;
+    color: #ddd;
+}
+body.night-mode details[open] > summary.folder-entry {
+    background: rgba(50, 80, 110, 0.9);
+    border-left-color: #7ab0e0;
+}
+body.night-mode .tree-root .file-entry {
+    background: rgba(50, 50, 50, 0.8);
+    color: #ccc;
+}
+body.night-mode .tree-root .entry:hover {
+    box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+}
+body.night-mode .file-info {
+    color: #aaa;
+}
+body.night-mode a {
+    color: #7ab0e0;
+}
+body.night-mode hr {
+    border-top-color: rgba(255,255,255,0.1);
+}
+body.night-mode .tree-root ul::before {
+    background: linear-gradient(to bottom, rgba(122, 176, 224, 0.3), rgba(122, 176, 224, 0.1));
+    border-left-color: #5a9acf;
+}
+
+/* ========== 手机响应式 ========== */
+@media screen and (max-width: 600px) {
+    .container {
+        max-width: 100%;
+        margin: 10px;
+        padding: 15px;
+    }
+    .tree-root ul {
+        padding-left: 10px;
+    }
+    .tree-root ul::before {
+        left: 4px;
+    }
+    .tree-root .entry {
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+    .icon {
+        font-size: 1.1em;
+    }
+    .file-info {
+        font-size: 0.75em;
+    }
+    h1 {
+        font-size: 1.5em;
+    }
+    .project-info h2 {
+        font-size: 1.5em;
+    }
+    .readme-card {
+        padding: 15px;
+    }
+    .stats {
+        gap: 10px;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <h1>🌳 目录树 <span style="font-size:0.6em; color:#666;">.</span></h1>
+        <button class="theme-btn" id="themeToggle">🌙 夜间模式</button>
+    </div>
+
+    <!-- 项目简介卡片 -->
+    <div class="project-info">
+        <h2>nlist</h2>
+        <p>本网站由nlist脚本构建，这是一个文件目录浏览器，基于tree命令生成，支持主页REDME文件显示</p>
+    </div>
+
+    <!-- 统计信息区域（将由 JavaScript 填充） -->
+    <div class="stats" id="stats">
+        <span class="stats-item">📁 文件夹: <span id="folder-count">0</span></span>
+        <span class="stats-item">📄 文件: <span id="file-count">0</span></span>
+    </div>
+
+<hr>
+<div id="tree-container" class="tree-root"></div>
+<hr>
+
+<!-- README 内容显示区域 -->
+
+<div class="readme-card">
+    <h3>📖 README</h3>
+    <div class="readme-content"><h1 id="nimg-一款基于rust的终端图片查看器">🌌 nimg
+一款基于<code>Rust</code>的终端图片查看器</h1>
+<p>一款基于<code>Rust</code>的终端图片查看器，使用<code>ratatui</code>构建终端界面,<code>image</code>库负责图片解码。</p>
+<p>利用半块字符（▀）在终端中显示图片，从而获得两倍的垂直分辨率，并支持平滑滚动与缩放。</p>
+<p><img src="image/nimg.jpg" alt="演示" /> <img src="image/nimg2.jpg"
+alt="演示" /></p>
+<h2 id="特性">特性</h2>
+<ul>
+<li>自动识别格式 –支持
+<code>PNG、JPEG、WebP、GIF、BMP、TIFF、ICO、AVIF、QOI</code>等（image
+库支持的所有格式）。</li>
+<li>缩放 – 按 + / - 键放大/缩小，保持图片宽高比。</li>
+<li>滚动 – 大图可使用方向键滚动查看。</li>
+<li>文件浏览器 –
+无参数运行时自动启动图形化文件选择器，支持目录导航。</li>
+<li>性能优化 –
+使用快速的三角滤波（Triangle）进行缩放，绘制循环高效。</li>
+<li>真彩色支持 – 在支持 24 位色的现代终端中完美显示。</li>
+</ul>
+<h2 id="安装">安装</h2>
+<p>从<code>crates.io</code>社区获取资源</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> install nimg</span></code></pre></div>
+<p>或手动克隆并编译：</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/nasyt233/nimg.git</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> nimg</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> build <span class="at">--release</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./target/release/nimg</span></span></code></pre></div>
+<h2 id="依赖">依赖</h2>
+<ul>
+<li><code>Rust 1.65</code> 或更高版本</li>
+<li>image 库的底层系统依赖（如 libpng、libjpeg 等）通常 cargo
+会自动处理，但某些系统可能需要手动安装：
+<ul>
+<li>Debian/Ubuntu：sudo apt install libpng-dev libjpeg-dev</li>
+</ul></li>
+</ul>
+<h2 id="使用方法">使用方法</h2>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nimg</span> <span class="co">#图形界面选择查看</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#或者</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">nimg</span> <span class="pp">[</span><span class="ss">图片路径</span><span class="pp">]</span> <span class="co">#指定查看的图片路径查看</span></span></code></pre></div>
+<ul>
+<li>如果提供了图片路径，程序直接以查看器模式打开。</li>
+<li>如果没有提供参数，则启动文件浏览器，可以在目录中选择图片。</li>
+</ul>
+<h2 id="快捷键">快捷键</h2>
+<p>按键 作用 - ← / → / ↑ / ↓ 滚动图片（当图片放大后） - + / = 放大（步长
+1.1 倍） - - / _ 缩小（步长 1.1 倍） - q 退出查看器 - Esc / q
+在文件浏览器中退出程序 - Enter 在文件浏览器中选择图片 / 进入目录 -
+Backspace 在文件浏览器中返回上级目录 - ↑ / ↓
+在文件浏览器中上下移动选择</p>
+<h2 id="工作原理">工作原理</h2>
+<ol type="1">
+<li>查看器使用<code>image</code>库将图片解码为 RGBA 缓冲区。</li>
+<li>然后根据终端大小（或用户设定的缩放比例）对图片进行缩放，再按字符逐个渲染：</li>
+<li>每个终端单元格显示两个垂直像素——上半部分用单元格前景色，下半部分用背景色，借助
+Unicode 半块字符 ▀ 实现。</li>
+<li>因此垂直分辨率是行数的两倍，水平分辨率保持每列一个像素。</li>
+<li>滚动和缩放通过重新计算显示区域并重新采样图片来实现。</li>
+</ol>
+<h2 id="构建">构建</h2>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">cargo</span> build <span class="at">--release</span></span></code></pre></div>
+<p>生成的可执行文件位于 target/release/nimg</p>
+<h2 id="配置">配置</h2>
+<p>无需配置文件，程序会自动适应终端尺寸。</p>
+<h2 id="许可证">许可证</h2>
+<p>本项目采用 MIT 许可证,详见 LICENSE 文件。</p>
+<h2 id="鸣谢">鸣谢</h2>
+<ul>
+<li>[ratatui] – 优秀的终端 UI 框架</li>
+<li>[image] – 强大的图片解码库</li>
+<li>[crossterm] – 跨平台终端操作支持</li>
+</ul>
+<figure>
+<img src="image/nimg3.png" alt="美图" />
+<figcaption aria-hidden="true">美图</figcaption>
+</figure></div>
+</div>
+
+<div style="text-align:center;">
+    <img src="https://foruda.gitee.com/avatar/1748842563869716713/14577413_nasyt_1748842563.png!avatar100" alt="访问计数" />
+</div>
+</div>
+
+<script>
+// ========== 从 tree -J 输出的 JSON 构建树 ==========
+const treeData = 
+[
+    {"type":"directory","name":".","contents":[
+        {"type":"file","name":"Cargo.lock"},
+        {"type":"file","name":"Cargo.toml"},
+        {"type":"file","name":"README.md"},
+        {"type":"file","name":"git.sh"},
+        {"type":"directory","name":"image","contents":[
+            {"type":"file","name":"nimg.jpg"},
+            {"type":"file","name":"nimg2.jpg"},
+            {"type":"file","name":"nimg3.png"}
+        ]},
+        {"type":"file","name":"nlist.html"},
+        {"type":"directory","name":"src","contents":[
+            {"type":"file","name":"main.rs"},
+            {"type":"file","name":"main2.rs"},
+            {"type":"file","name":"main3.rs"}
+        ]},
+        {"type":"directory","name":"target","contents":[
+            {"type":"file","name":"CACHEDIR.TAG"},
+            {"type":"directory","name":"debug","contents":[
+                {"type":"file","name":"20260108_010752_1478.png.webp"},
+                {"type":"directory","name":"build","contents":[
+                    {"type":"directory","name":"anyhow-16978ee7f7672e33","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-16978ee7f7672e33"},
+                        {"type":"file","name":"build_script_build-16978ee7f7672e33.d"}
+                    ]},
+                    {"type":"directory","name":"anyhow-b7a3665176e0d859","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"crc32fast-6275b1138f92e684","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"crc32fast-c85241e315b23bad","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-c85241e315b23bad"},
+                        {"type":"file","name":"build_script_build-c85241e315b23bad.d"}
+                    ]},
+                    {"type":"directory","name":"crossbeam-utils-53ddf5039cdbfe41","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"crossbeam-utils-8811181eb770018e","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-8811181eb770018e"},
+                        {"type":"file","name":"build_script_build-8811181eb770018e.d"}
+                    ]},
+                    {"type":"directory","name":"libc-16e03837525311d0","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"libc-7ae560233c8f613a","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-7ae560233c8f613a"},
+                        {"type":"file","name":"build_script_build-7ae560233c8f613a.d"}
+                    ]},
+                    {"type":"directory","name":"num-traits-211cea5bf9915573","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"num-traits-4c5a97080a92cc73","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-4c5a97080a92cc73"},
+                        {"type":"file","name":"build_script_build-4c5a97080a92cc73.d"}
+                    ]},
+                    {"type":"directory","name":"parking_lot_core-0b5006f712d8960d","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-0b5006f712d8960d"},
+                        {"type":"file","name":"build_script_build-0b5006f712d8960d.d"}
+                    ]},
+                    {"type":"directory","name":"parking_lot_core-48c7d1e2680c1c05","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"paste-185d18445d80990e","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"paste-a008a997dd19ac32","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-a008a997dd19ac32"},
+                        {"type":"file","name":"build_script_build-a008a997dd19ac32.d"}
+                    ]},
+                    {"type":"directory","name":"proc-macro2-8d32747a2af63a70","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"proc-macro2-eb6a185e97311fe0","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-eb6a185e97311fe0"},
+                        {"type":"file","name":"build_script_build-eb6a185e97311fe0.d"}
+                    ]},
+                    {"type":"directory","name":"quote-1c229e5eff0e211e","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-1c229e5eff0e211e"},
+                        {"type":"file","name":"build_script_build-1c229e5eff0e211e.d"}
+                    ]},
+                    {"type":"directory","name":"quote-a97c35bbff4baf59","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"rayon-core-809bb4c7f59e3e98","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"rayon-core-859b96edb44b9e59","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-859b96edb44b9e59"},
+                        {"type":"file","name":"build_script_build-859b96edb44b9e59.d"}
+                    ]},
+                    {"type":"directory","name":"rustversion-8a4b256d0aa2f1ef","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out","contents":[
+                            {"type":"file","name":"version.expr"}
+                        ]},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"rustversion-c66716c6eb5636c6","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-c66716c6eb5636c6"},
+                        {"type":"file","name":"build_script_build-c66716c6eb5636c6.d"}
+                    ]},
+                    {"type":"directory","name":"signal-hook-079c238ee1c5d0dc","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-079c238ee1c5d0dc"},
+                        {"type":"file","name":"build_script_build-079c238ee1c5d0dc.d"}
+                    ]},
+                    {"type":"directory","name":"signal-hook-08f73f3309d96da2","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"zerocopy-0c711a355fb2f606","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"zerocopy-bb45e5093c81e599","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-bb45e5093c81e599"},
+                        {"type":"file","name":"build_script_build-bb45e5093c81e599.d"}
+                    ]}
+                ]},
+                {"type":"directory","name":"deps","contents":[
+                    {"type":"file","name":"adler2-e62b6603752e6716.d"},
+                    {"type":"file","name":"allocator_api2-766e058e919c2180.d"},
+                    {"type":"file","name":"anyhow-33ceead4659631f5.d"},
+                    {"type":"file","name":"autocfg-0c820b21cab0443f.d"},
+                    {"type":"file","name":"bit_field-82ed9dde09e61470.d"},
+                    {"type":"file","name":"bitflags-518ab889b8cfaaa1.d"},
+                    {"type":"file","name":"bitflags-91159ca802eaeac9.d"},
+                    {"type":"file","name":"bytemuck-7ae70b796b9bc01d.d"},
+                    {"type":"file","name":"byteorder-688989c88801c05e.d"},
+                    {"type":"file","name":"cassowary-e52c573e20e6693a.d"},
+                    {"type":"file","name":"castaway-6e7aa3a7d5d8b5c7.d"},
+                    {"type":"file","name":"cfg_if-5e8ad6e6a784d9eb.d"},
+                    {"type":"file","name":"color_quant-dca571038afcab6f.d"},
+                    {"type":"file","name":"compact_str-56c842a175fcf995.d"},
+                    {"type":"file","name":"crc32fast-435a7e2bb6a1c8f7.d"},
+                    {"type":"file","name":"crossbeam_deque-75036fd46c86b2bd.d"},
+                    {"type":"file","name":"crossbeam_epoch-13b1a872508645c2.d"},
+                    {"type":"file","name":"crossbeam_utils-a2250aa2e3766077.d"},
+                    {"type":"file","name":"crossterm-b0504bc260f98598.d"},
+                    {"type":"file","name":"either-83f77a5a771b2b81.d"},
+                    {"type":"file","name":"equivalent-c362229503832bfb.d"},
+                    {"type":"file","name":"errno-ecd987a20558ae55.d"},
+                    {"type":"file","name":"exr-6fdd9454cbe7e5d3.d"},
+                    {"type":"file","name":"fdeflate-a011431b09c6d864.d"},
+                    {"type":"file","name":"flate2-ff5e5801c193afeb.d"},
+                    {"type":"file","name":"foldhash-d57b5a45543db739.d"},
+                    {"type":"file","name":"gif-018bbf1f23f1a12d.d"},
+                    {"type":"file","name":"half-2b92cd482b7c9623.d"},
+                    {"type":"file","name":"hashbrown-bcceebcc15443f5f.d"},
+                    {"type":"file","name":"heck-938d8a6f9bb3a06f.d"},
+                    {"type":"file","name":"image-e25dd90930c653c9.d"},
+                    {"type":"file","name":"itertools-174c005b5e63d51a.d"},
+                    {"type":"file","name":"itertools-eec664fcf557134b.d"},
+                    {"type":"file","name":"itoa-73fe230c6412211a.d"},
+                    {"type":"file","name":"jpeg_decoder-5a435b752d581ea3.d"},
+                    {"type":"file","name":"lebe-c2ff7c6c7a1556dd.d"},
+                    {"type":"file","name":"libadler2-e62b6603752e6716.rlib"},
+                    {"type":"file","name":"libadler2-e62b6603752e6716.rmeta"},
+                    {"type":"file","name":"liballocator_api2-766e058e919c2180.rlib"},
+                    {"type":"file","name":"liballocator_api2-766e058e919c2180.rmeta"},
+                    {"type":"file","name":"libanyhow-33ceead4659631f5.rlib"},
+                    {"type":"file","name":"libanyhow-33ceead4659631f5.rmeta"},
+                    {"type":"file","name":"libautocfg-0c820b21cab0443f.rlib"},
+                    {"type":"file","name":"libautocfg-0c820b21cab0443f.rmeta"},
+                    {"type":"file","name":"libbit_field-82ed9dde09e61470.rlib"},
+                    {"type":"file","name":"libbit_field-82ed9dde09e61470.rmeta"},
+                    {"type":"file","name":"libbitflags-518ab889b8cfaaa1.rlib"},
+                    {"type":"file","name":"libbitflags-518ab889b8cfaaa1.rmeta"},
+                    {"type":"file","name":"libbitflags-91159ca802eaeac9.rlib"},
+                    {"type":"file","name":"libbitflags-91159ca802eaeac9.rmeta"},
+                    {"type":"file","name":"libbytemuck-7ae70b796b9bc01d.rlib"},
+                    {"type":"file","name":"libbytemuck-7ae70b796b9bc01d.rmeta"},
+                    {"type":"file","name":"libbyteorder-688989c88801c05e.rlib"},
+                    {"type":"file","name":"libbyteorder-688989c88801c05e.rmeta"},
+                    {"type":"file","name":"libc-beae129377ecadc8.d"},
+                    {"type":"file","name":"libcassowary-e52c573e20e6693a.rlib"},
+                    {"type":"file","name":"libcassowary-e52c573e20e6693a.rmeta"},
+                    {"type":"file","name":"libcastaway-6e7aa3a7d5d8b5c7.rlib"},
+                    {"type":"file","name":"libcastaway-6e7aa3a7d5d8b5c7.rmeta"},
+                    {"type":"file","name":"libcfg_if-5e8ad6e6a784d9eb.rlib"},
+                    {"type":"file","name":"libcfg_if-5e8ad6e6a784d9eb.rmeta"},
+                    {"type":"file","name":"libcolor_quant-dca571038afcab6f.rlib"},
+                    {"type":"file","name":"libcolor_quant-dca571038afcab6f.rmeta"},
+                    {"type":"file","name":"libcompact_str-56c842a175fcf995.rlib"},
+                    {"type":"file","name":"libcompact_str-56c842a175fcf995.rmeta"},
+                    {"type":"file","name":"libcrc32fast-435a7e2bb6a1c8f7.rlib"},
+                    {"type":"file","name":"libcrc32fast-435a7e2bb6a1c8f7.rmeta"},
+                    {"type":"file","name":"libcrossbeam_deque-75036fd46c86b2bd.rlib"},
+                    {"type":"file","name":"libcrossbeam_deque-75036fd46c86b2bd.rmeta"},
+                    {"type":"file","name":"libcrossbeam_epoch-13b1a872508645c2.rlib"},
+                    {"type":"file","name":"libcrossbeam_epoch-13b1a872508645c2.rmeta"},
+                    {"type":"file","name":"libcrossbeam_utils-a2250aa2e3766077.rlib"},
+                    {"type":"file","name":"libcrossbeam_utils-a2250aa2e3766077.rmeta"},
+                    {"type":"file","name":"libcrossterm-b0504bc260f98598.rlib"},
+                    {"type":"file","name":"libcrossterm-b0504bc260f98598.rmeta"},
+                    {"type":"file","name":"libeither-83f77a5a771b2b81.rlib"},
+                    {"type":"file","name":"libeither-83f77a5a771b2b81.rmeta"},
+                    {"type":"file","name":"libequivalent-c362229503832bfb.rlib"},
+                    {"type":"file","name":"libequivalent-c362229503832bfb.rmeta"},
+                    {"type":"file","name":"liberrno-ecd987a20558ae55.rlib"},
+                    {"type":"file","name":"liberrno-ecd987a20558ae55.rmeta"},
+                    {"type":"file","name":"libexr-6fdd9454cbe7e5d3.rlib"},
+                    {"type":"file","name":"libexr-6fdd9454cbe7e5d3.rmeta"},
+                    {"type":"file","name":"libfdeflate-a011431b09c6d864.rlib"},
+                    {"type":"file","name":"libfdeflate-a011431b09c6d864.rmeta"},
+                    {"type":"file","name":"libflate2-ff5e5801c193afeb.rlib"},
+                    {"type":"file","name":"libflate2-ff5e5801c193afeb.rmeta"},
+                    {"type":"file","name":"libfoldhash-d57b5a45543db739.rlib"},
+                    {"type":"file","name":"libfoldhash-d57b5a45543db739.rmeta"},
+                    {"type":"file","name":"libgif-018bbf1f23f1a12d.rlib"},
+                    {"type":"file","name":"libgif-018bbf1f23f1a12d.rmeta"},
+                    {"type":"file","name":"libhalf-2b92cd482b7c9623.rlib"},
+                    {"type":"file","name":"libhalf-2b92cd482b7c9623.rmeta"},
+                    {"type":"file","name":"libhashbrown-bcceebcc15443f5f.rlib"},
+                    {"type":"file","name":"libhashbrown-bcceebcc15443f5f.rmeta"},
+                    {"type":"file","name":"libheck-938d8a6f9bb3a06f.rlib"},
+                    {"type":"file","name":"libheck-938d8a6f9bb3a06f.rmeta"},
+                    {"type":"file","name":"libimage-e25dd90930c653c9.rlib"},
+                    {"type":"file","name":"libimage-e25dd90930c653c9.rmeta"},
+                    {"type":"file","name":"libitertools-174c005b5e63d51a.rlib"},
+                    {"type":"file","name":"libitertools-174c005b5e63d51a.rmeta"},
+                    {"type":"file","name":"libitertools-eec664fcf557134b.rlib"},
+                    {"type":"file","name":"libitertools-eec664fcf557134b.rmeta"},
+                    {"type":"file","name":"libitoa-73fe230c6412211a.rlib"},
+                    {"type":"file","name":"libitoa-73fe230c6412211a.rmeta"},
+                    {"type":"file","name":"libjpeg_decoder-5a435b752d581ea3.rlib"},
+                    {"type":"file","name":"libjpeg_decoder-5a435b752d581ea3.rmeta"},
+                    {"type":"file","name":"liblebe-c2ff7c6c7a1556dd.rlib"},
+                    {"type":"file","name":"liblebe-c2ff7c6c7a1556dd.rmeta"},
+                    {"type":"file","name":"liblibc-beae129377ecadc8.rlib"},
+                    {"type":"file","name":"liblibc-beae129377ecadc8.rmeta"},
+                    {"type":"file","name":"liblock_api-3d8ac4f9ed113ca9.rlib"},
+                    {"type":"file","name":"liblock_api-3d8ac4f9ed113ca9.rmeta"},
+                    {"type":"file","name":"liblog-23e26be5776c9b74.rlib"},
+                    {"type":"file","name":"liblog-23e26be5776c9b74.rmeta"},
+                    {"type":"file","name":"liblru-68dcb6e77f48d613.rlib"},
+                    {"type":"file","name":"liblru-68dcb6e77f48d613.rmeta"},
+                    {"type":"file","name":"libminiz_oxide-e924f5e9e4694377.rlib"},
+                    {"type":"file","name":"libminiz_oxide-e924f5e9e4694377.rmeta"},
+                    {"type":"file","name":"libmio-df3ab00023a833d8.rlib"},
+                    {"type":"file","name":"libmio-df3ab00023a833d8.rmeta"},
+                    {"type":"file","name":"libnum_traits-037c74fcfbdd747e.rlib"},
+                    {"type":"file","name":"libnum_traits-037c74fcfbdd747e.rmeta"},
+                    {"type":"file","name":"libparking_lot-996e4f2a62e065d8.rlib"},
+                    {"type":"file","name":"libparking_lot-996e4f2a62e065d8.rmeta"},
+                    {"type":"file","name":"libparking_lot_core-7da9e53c6dc7b3e8.rlib"},
+                    {"type":"file","name":"libparking_lot_core-7da9e53c6dc7b3e8.rmeta"},
+                    {"type":"file","name":"libpaste-69cabb2497ce03c3.so"},
+                    {"type":"file","name":"libpng-638f5ece39947fcd.rlib"},
+                    {"type":"file","name":"libpng-638f5ece39947fcd.rmeta"},
+                    {"type":"file","name":"libproc_macro2-a5aa6fc6b07943d0.rlib"},
+                    {"type":"file","name":"libproc_macro2-a5aa6fc6b07943d0.rmeta"},
+                    {"type":"file","name":"libqoi-5d2bbe11a4b86881.rlib"},
+                    {"type":"file","name":"libqoi-5d2bbe11a4b86881.rmeta"},
+                    {"type":"file","name":"libquote-6b5d9d76b111a9ba.rlib"},
+                    {"type":"file","name":"libquote-6b5d9d76b111a9ba.rmeta"},
+                    {"type":"file","name":"libratatui-679f676b9cc22fee.rlib"},
+                    {"type":"file","name":"libratatui-679f676b9cc22fee.rmeta"},
+                    {"type":"file","name":"librayon-84e51622fae81e2f.rlib"},
+                    {"type":"file","name":"librayon-84e51622fae81e2f.rmeta"},
+                    {"type":"file","name":"librayon_core-837ce1819b55f744.rlib"},
+                    {"type":"file","name":"librayon_core-837ce1819b55f744.rmeta"},
+                    {"type":"file","name":"librustversion-222d702f2740b48e.so"},
+                    {"type":"file","name":"libryu-5fdc658e23c5931b.rlib"},
+                    {"type":"file","name":"libryu-5fdc658e23c5931b.rmeta"},
+                    {"type":"file","name":"libscopeguard-f146b34d0cebeeb9.rlib"},
+                    {"type":"file","name":"libscopeguard-f146b34d0cebeeb9.rmeta"},
+                    {"type":"file","name":"libsignal_hook-82db5772dab2eebc.rlib"},
+                    {"type":"file","name":"libsignal_hook-82db5772dab2eebc.rmeta"},
+                    {"type":"file","name":"libsignal_hook_mio-674052c06b82c4e3.rlib"},
+                    {"type":"file","name":"libsignal_hook_mio-674052c06b82c4e3.rmeta"},
+                    {"type":"file","name":"libsignal_hook_registry-e3a54c1584847035.rlib"},
+                    {"type":"file","name":"libsignal_hook_registry-e3a54c1584847035.rmeta"},
+                    {"type":"file","name":"libsimd_adler32-ff5243d67153d4ae.rlib"},
+                    {"type":"file","name":"libsimd_adler32-ff5243d67153d4ae.rmeta"},
+                    {"type":"file","name":"libsmallvec-9e91b3f58ba427ec.rlib"},
+                    {"type":"file","name":"libsmallvec-9e91b3f58ba427ec.rmeta"},
+                    {"type":"file","name":"libstability-e6dde407865a8c7d.so"},
+                    {"type":"file","name":"libstatic_assertions-adf70cd95b809911.rlib"},
+                    {"type":"file","name":"libstatic_assertions-adf70cd95b809911.rmeta"},
+                    {"type":"file","name":"libstrum-12b34f1b333441e7.rlib"},
+                    {"type":"file","name":"libstrum-12b34f1b333441e7.rmeta"},
+                    {"type":"file","name":"libstrum_macros-7b34810f15b880cd.so"},
+                    {"type":"file","name":"libsyn-e57d80868f95093d.rlib"},
+                    {"type":"file","name":"libsyn-e57d80868f95093d.rmeta"},
+                    {"type":"file","name":"libtiff-377e584d5adff540.rlib"},
+                    {"type":"file","name":"libtiff-377e584d5adff540.rmeta"},
+                    {"type":"file","name":"libunicode_ident-c998124a783c8c0d.rlib"},
+                    {"type":"file","name":"libunicode_ident-c998124a783c8c0d.rmeta"},
+                    {"type":"file","name":"libunicode_segmentation-19036940689c97e6.rlib"},
+                    {"type":"file","name":"libunicode_segmentation-19036940689c97e6.rmeta"},
+                    {"type":"file","name":"libunicode_truncate-8dec49fb051effd1.rlib"},
+                    {"type":"file","name":"libunicode_truncate-8dec49fb051effd1.rmeta"},
+                    {"type":"file","name":"libunicode_width-73900a498e1ca713.rlib"},
+                    {"type":"file","name":"libunicode_width-73900a498e1ca713.rmeta"},
+                    {"type":"file","name":"libweezl-52e426b810e12ee3.rlib"},
+                    {"type":"file","name":"libweezl-52e426b810e12ee3.rmeta"},
+                    {"type":"file","name":"libzerocopy-f19e95ee417958dc.rlib"},
+                    {"type":"file","name":"libzerocopy-f19e95ee417958dc.rmeta"},
+                    {"type":"file","name":"libzerocopy_derive-f4f0d4eab0e7ab4e.so"},
+                    {"type":"file","name":"libzune_inflate-01fc7cc33ca85d5f.rlib"},
+                    {"type":"file","name":"libzune_inflate-01fc7cc33ca85d5f.rmeta"},
+                    {"type":"file","name":"lock_api-3d8ac4f9ed113ca9.d"},
+                    {"type":"file","name":"log-23e26be5776c9b74.d"},
+                    {"type":"file","name":"lru-68dcb6e77f48d613.d"},
+                    {"type":"file","name":"miniz_oxide-e924f5e9e4694377.d"},
+                    {"type":"file","name":"mio-df3ab00023a833d8.d"},
+                    {"type":"file","name":"nimg-94de8c796d397400"},
+                    {"type":"file","name":"nimg-94de8c796d397400.d"},
+                    {"type":"file","name":"ntiv-6efc63a4d2fecfb9"},
+                    {"type":"file","name":"ntiv-6efc63a4d2fecfb9.d"},
+                    {"type":"file","name":"num_traits-037c74fcfbdd747e.d"},
+                    {"type":"file","name":"parking_lot-996e4f2a62e065d8.d"},
+                    {"type":"file","name":"parking_lot_core-7da9e53c6dc7b3e8.d"},
+                    {"type":"file","name":"paste-69cabb2497ce03c3.d"},
+                    {"type":"file","name":"png-638f5ece39947fcd.d"},
+                    {"type":"file","name":"proc_macro2-a5aa6fc6b07943d0.d"},
+                    {"type":"file","name":"qoi-5d2bbe11a4b86881.d"},
+                    {"type":"file","name":"quote-6b5d9d76b111a9ba.d"},
+                    {"type":"file","name":"ratatui-679f676b9cc22fee.d"},
+                    {"type":"file","name":"rayon-84e51622fae81e2f.d"},
+                    {"type":"file","name":"rayon_core-837ce1819b55f744.d"},
+                    {"type":"file","name":"rustversion-222d702f2740b48e.d"},
+                    {"type":"file","name":"ryu-5fdc658e23c5931b.d"},
+                    {"type":"file","name":"scopeguard-f146b34d0cebeeb9.d"},
+                    {"type":"file","name":"signal_hook-82db5772dab2eebc.d"},
+                    {"type":"file","name":"signal_hook_mio-674052c06b82c4e3.d"},
+                    {"type":"file","name":"signal_hook_registry-e3a54c1584847035.d"},
+                    {"type":"file","name":"simd_adler32-ff5243d67153d4ae.d"},
+                    {"type":"file","name":"smallvec-9e91b3f58ba427ec.d"},
+                    {"type":"file","name":"stability-e6dde407865a8c7d.d"},
+                    {"type":"file","name":"static_assertions-adf70cd95b809911.d"},
+                    {"type":"file","name":"strum-12b34f1b333441e7.d"},
+                    {"type":"file","name":"strum_macros-7b34810f15b880cd.d"},
+                    {"type":"file","name":"syn-e57d80868f95093d.d"},
+                    {"type":"file","name":"tiff-377e584d5adff540.d"},
+                    {"type":"file","name":"unicode_ident-c998124a783c8c0d.d"},
+                    {"type":"file","name":"unicode_segmentation-19036940689c97e6.d"},
+                    {"type":"file","name":"unicode_truncate-8dec49fb051effd1.d"},
+                    {"type":"file","name":"unicode_width-73900a498e1ca713.d"},
+                    {"type":"file","name":"weezl-52e426b810e12ee3.d"},
+                    {"type":"file","name":"zerocopy-f19e95ee417958dc.d"},
+                    {"type":"file","name":"zerocopy_derive-f4f0d4eab0e7ab4e.d"},
+                    {"type":"file","name":"zune_inflate-01fc7cc33ca85d5f.d"}
+                ]},
+                {"type":"directory","name":"examples"},
+                {"type":"directory","name":"incremental","contents":[
+                    {"type":"directory","name":"nimg-1rci8e3wl75vl","contents":[
+                        {"type":"directory","name":"s-hguqwy94vh-0nstjs6-5l77laufbushkonqqxvmc0j0f","contents":[
+                            {"type":"file","name":"03wajdw0lnfki4ckudv7jexb3.o"},
+                            {"type":"file","name":"03y86g99xiancgljh0yjxauaj.o"},
+                            {"type":"file","name":"053xpcemrhwwoltlkgnen9j85.o"},
+                            {"type":"file","name":"060gjxfl7cqlg8e34tuqtseo9.o"},
+                            {"type":"file","name":"0d3by2xt02b0s4ptolfrt19rz.o"},
+                            {"type":"file","name":"0egpvqslziybhiojvgctjrh8n.o"},
+                            {"type":"file","name":"0pjkmrdpxi76fib1c4nbvbbn2.o"},
+                            {"type":"file","name":"0s8z1opp96hnmyxccal5iygdu.o"},
+                            {"type":"file","name":"0yygcz8aqbcshzmhtleqb21jr.o"},
+                            {"type":"file","name":"11vfcijs22kram8lqjklkxpoe.o"},
+                            {"type":"file","name":"14keazbw410z4tof82w3ajfmr.o"},
+                            {"type":"file","name":"1fb2spfnnw32hp4nn92ewtj72.o"},
+                            {"type":"file","name":"1jyt0ttpf9ce0x4x16nk8eg9m.o"},
+                            {"type":"file","name":"1s4iw1g7lkf69o0kjh2erkvvg.o"},
+                            {"type":"file","name":"1s54h32k3weaj8an14019e8z5.o"},
+                            {"type":"file","name":"1tt11f3j9qatjtls1g6inx3g0.o"},
+                            {"type":"file","name":"208lua582j1xhex05s4kprwlg.o"},
+                            {"type":"file","name":"27hbonvhsp0h8pe0dfr96nlr6.o"},
+                            {"type":"file","name":"2b7a2e2p20uicxhh94hzd0ag9.o"},
+                            {"type":"file","name":"2cole94bnrpk5ixtt9pbamtq5.o"},
+                            {"type":"file","name":"2v9xfmm33z7lj6mgs1u4de7xv.o"},
+                            {"type":"file","name":"36ssui97lu1jbl4rauyyeqtdj.o"},
+                            {"type":"file","name":"37hmx60rbejanr8jrsg3kvlvo.o"},
+                            {"type":"file","name":"3jfhzthzun2a9jt3y4h6qzj5p.o"},
+                            {"type":"file","name":"3lqbapao17qcq6zkwi2jnpyd3.o"},
+                            {"type":"file","name":"3uzyh3zzweqlvhm0d3lyu50l0.o"},
+                            {"type":"file","name":"3zrjsko2z8qkhu20xkelcze59.o"},
+                            {"type":"file","name":"41uaq3tya5ma6595eyu695p50.o"},
+                            {"type":"file","name":"4fjn3q6k1khij8pl2h8lxbu51.o"},
+                            {"type":"file","name":"4k2nyqi79scrzgkqa0k4srmnk.o"},
+                            {"type":"file","name":"4qhmax2af1hs9ps9t5r7wtoy9.o"},
+                            {"type":"file","name":"4sb17sdydy65fdmsq4kxxt2rb.o"},
+                            {"type":"file","name":"55623r45e8fajp8ikxfiv6axv.o"},
+                            {"type":"file","name":"595n9fs61502g6k532vf1htrq.o"},
+                            {"type":"file","name":"5dfrv2rp8jzsqv155eh1f3nlq.o"},
+                            {"type":"file","name":"5frg38n8hnuvgbzhs09yz7pni.o"},
+                            {"type":"file","name":"5v3ongsf50pcpe92mu2o6yueb.o"},
+                            {"type":"file","name":"65wtcnvgm8f1fb5bgdkkwou2k.o"},
+                            {"type":"file","name":"6afwltg79oh258uzfxgfu1bet.o"},
+                            {"type":"file","name":"6ekpe3btyu4jl4kncoxejohl5.o"},
+                            {"type":"file","name":"6ey1tgxi2bmurpxfvb88j4wd0.o"},
+                            {"type":"file","name":"6oqme38xjx8bi5jurnhs5w97e.o"},
+                            {"type":"file","name":"6s5iuoti63zutuvb1rm54pp55.o"},
+                            {"type":"file","name":"769ckp98m4kj5pbk06l0s10lm.o"},
+                            {"type":"file","name":"76rbynhby4cciv3d7ykigpsn4.o"},
+                            {"type":"file","name":"7a9tdla210l52ayxt2pjbln55.o"},
+                            {"type":"file","name":"7bsqd5n3r02a7we1wnsu0wp11.o"},
+                            {"type":"file","name":"7cinivuniz2cpx3jeb4k4gxiz.o"},
+                            {"type":"file","name":"7guojl7tb405xlvdghbwjx3xr.o"},
+                            {"type":"file","name":"7ox8al8x7pd7b1jryfi3dqkmu.o"},
+                            {"type":"file","name":"7r1kmd91jkvbqrwxpziv04s6l.o"},
+                            {"type":"file","name":"84rthe7cr3p1kmjbluxjvpdkr.o"},
+                            {"type":"file","name":"85yhs8bm3nf7ga9zz3v8ie9k9.o"},
+                            {"type":"file","name":"8d5ncwvqfxpjavuexa63f87rh.o"},
+                            {"type":"file","name":"8fvifhb7fdenox9dtkq7vtdzs.o"},
+                            {"type":"file","name":"8kcymiyg9vinyddki4o87bszs.o"},
+                            {"type":"file","name":"8qovhl3j8hmgkz8q4hukaenae.o"},
+                            {"type":"file","name":"8tdr16l00eacmlkr2a9wjfgnd.o"},
+                            {"type":"file","name":"8yev1urnp0gpa27alzsuq1zla.o"},
+                            {"type":"file","name":"8zbpsorqin29vyj6bkej42tjo.o"},
+                            {"type":"file","name":"9ftveytt1aq1kmf57saevljkm.o"},
+                            {"type":"file","name":"9q8w6ju634di9nwcq8indyw4o.o"},
+                            {"type":"file","name":"9vnq4awqhap3ohxi45o2sjcrc.o"},
+                            {"type":"file","name":"a0xjhzmmj82bd4aj62hn7a2v2.o"},
+                            {"type":"file","name":"a149ydcxrjf7s6ip2mq5wkp0z.o"},
+                            {"type":"file","name":"a1i0lglr9jvhzppv0howzfbbu.o"},
+                            {"type":"file","name":"a4ri1kclrira0fyebmc2mnbka.o"},
+                            {"type":"file","name":"a4v0th7fc1zjol0t5phssnz4b.o"},
+                            {"type":"file","name":"aed4ay5v9vo49ft8labcean9a.o"},
+                            {"type":"file","name":"airsrqbc3afrfh76yfsuli75s.o"},
+                            {"type":"file","name":"aln34uo6imhf8wyez7k9049t6.o"},
+                            {"type":"file","name":"b3r6pvstydjuqsbmok73utyjj.o"},
+                            {"type":"file","name":"b4qyzme7aw61hd0j29mjya3jp.o"},
+                            {"type":"file","name":"bb887tzxiakz0kiahj4q7rq1y.o"},
+                            {"type":"file","name":"bcmzd7ovesbxtgpqia5rrhnau.o"},
+                            {"type":"file","name":"be7f32l6y3frgdzhzb7by39ha.o"},
+                            {"type":"file","name":"beaexh789i0266jww6gpdyg9j.o"},
+                            {"type":"file","name":"bl0uwo4y03kvpur6oeqrzptu7.o"},
+                            {"type":"file","name":"blcbe7qln4wiy5qef9b3xiy7p.o"},
+                            {"type":"file","name":"boxnugfeb6oqvsqp1bh08bw8h.o"},
+                            {"type":"file","name":"bpv8is586pp8ge49bw55le27m.o"},
+                            {"type":"file","name":"brry56rqerzf9v2vx8m4tilz7.o"},
+                            {"type":"file","name":"btg87jfjpuf52d3bwanrfeyo4.o"},
+                            {"type":"file","name":"c3t0zkgjlnrvxbo5ujup8gju6.o"},
+                            {"type":"file","name":"c3v89zg8bsh6m1egzuo2icuux.o"},
+                            {"type":"file","name":"c4sz9pf7qp1ptemcy8luw7gig.o"},
+                            {"type":"file","name":"c502ogsxskfprjos0d03pss22.o"},
+                            {"type":"file","name":"c51yw0vk40g1vyvwkxmqzmsle.o"},
+                            {"type":"file","name":"cdifodu22x8h98jb1ha9kjf5t.o"},
+                            {"type":"file","name":"cig6bt1pojmtqt7gv5q5b8qwu.o"},
+                            {"type":"file","name":"cuaz8vax01x1o960lfp2dkfye.o"},
+                            {"type":"file","name":"d1rika4sbtyz4fihgono6aj4x.o"},
+                            {"type":"file","name":"d80flys82q626l3g77b8cjtd8.o"},
+                            {"type":"file","name":"ddh2dtrqak6t3jfdllyqx0vt0.o"},
+                            {"type":"file","name":"dep-graph.bin"},
+                            {"type":"file","name":"di1maajpzjegxdfwwkmcfq7lf.o"},
+                            {"type":"file","name":"dof42gqjjw4bj4j1oocuqmtwb.o"},
+                            {"type":"file","name":"dqomilh2enfjuos0kwa0oyggj.o"},
+                            {"type":"file","name":"drxtopusssl3fyjf4zfldcn3i.o"},
+                            {"type":"file","name":"dsrs4em3ehgyobga0b2509lun.o"},
+                            {"type":"file","name":"e94nlg18nws0yaak78f0vi9i1.o"},
+                            {"type":"file","name":"eh3lpcoe6jddphbd60kj63t0z.o"},
+                            {"type":"file","name":"eivs88kn0wgbjm21n5jwzgafx.o"},
+                            {"type":"file","name":"et81u3tymjhlq01cfv30ys3et.o"},
+                            {"type":"file","name":"etfczssyjed3w2v5699uyiy1y.o"},
+                            {"type":"file","name":"eyurtxjtzdm4mm3kys6798l6t.o"},
+                            {"type":"file","name":"f50v1vpuweytheb85fe89111p.o"},
+                            {"type":"file","name":"query-cache.bin"},
+                            {"type":"file","name":"work-products.bin"}
+                        ]},
+                        {"type":"file","name":"s-hguqwy94vh-0nstjs6.lock"},
+                        {"type":"directory","name":"s-hgur18ykft-13o75ja-dz2e5ejyskp422wnhr1azkdxl","contents":[
+                            {"type":"file","name":"03wajdw0lnfki4ckudv7jexb3.o"},
+                            {"type":"file","name":"03y86g99xiancgljh0yjxauaj.o"},
+                            {"type":"file","name":"053xpcemrhwwoltlkgnen9j85.o"},
+                            {"type":"file","name":"060gjxfl7cqlg8e34tuqtseo9.o"},
+                            {"type":"file","name":"0d3by2xt02b0s4ptolfrt19rz.o"},
+                            {"type":"file","name":"0egpvqslziybhiojvgctjrh8n.o"},
+                            {"type":"file","name":"0pjkmrdpxi76fib1c4nbvbbn2.o"},
+                            {"type":"file","name":"0s8z1opp96hnmyxccal5iygdu.o"},
+                            {"type":"file","name":"0yygcz8aqbcshzmhtleqb21jr.o"},
+                            {"type":"file","name":"11vfcijs22kram8lqjklkxpoe.o"},
+                            {"type":"file","name":"14keazbw410z4tof82w3ajfmr.o"},
+                            {"type":"file","name":"1fb2spfnnw32hp4nn92ewtj72.o"},
+                            {"type":"file","name":"1jyt0ttpf9ce0x4x16nk8eg9m.o"},
+                            {"type":"file","name":"1s4iw1g7lkf69o0kjh2erkvvg.o"},
+                            {"type":"file","name":"1s54h32k3weaj8an14019e8z5.o"},
+                            {"type":"file","name":"1tt11f3j9qatjtls1g6inx3g0.o"},
+                            {"type":"file","name":"208lua582j1xhex05s4kprwlg.o"},
+                            {"type":"file","name":"27hbonvhsp0h8pe0dfr96nlr6.o"},
+                            {"type":"file","name":"2b7a2e2p20uicxhh94hzd0ag9.o"},
+                            {"type":"file","name":"2cole94bnrpk5ixtt9pbamtq5.o"},
+                            {"type":"file","name":"2v9xfmm33z7lj6mgs1u4de7xv.o"},
+                            {"type":"file","name":"36ssui97lu1jbl4rauyyeqtdj.o"},
+                            {"type":"file","name":"37hmx60rbejanr8jrsg3kvlvo.o"},
+                            {"type":"file","name":"3jfhzthzun2a9jt3y4h6qzj5p.o"},
+                            {"type":"file","name":"3lqbapao17qcq6zkwi2jnpyd3.o"},
+                            {"type":"file","name":"3uzyh3zzweqlvhm0d3lyu50l0.o"},
+                            {"type":"file","name":"3zrjsko2z8qkhu20xkelcze59.o"},
+                            {"type":"file","name":"41uaq3tya5ma6595eyu695p50.o"},
+                            {"type":"file","name":"4fjn3q6k1khij8pl2h8lxbu51.o"},
+                            {"type":"file","name":"4k2nyqi79scrzgkqa0k4srmnk.o"},
+                            {"type":"file","name":"4qhmax2af1hs9ps9t5r7wtoy9.o"},
+                            {"type":"file","name":"4sb17sdydy65fdmsq4kxxt2rb.o"},
+                            {"type":"file","name":"55623r45e8fajp8ikxfiv6axv.o"},
+                            {"type":"file","name":"595n9fs61502g6k532vf1htrq.o"},
+                            {"type":"file","name":"5dfrv2rp8jzsqv155eh1f3nlq.o"},
+                            {"type":"file","name":"5frg38n8hnuvgbzhs09yz7pni.o"},
+                            {"type":"file","name":"5v3ongsf50pcpe92mu2o6yueb.o"},
+                            {"type":"file","name":"65wtcnvgm8f1fb5bgdkkwou2k.o"},
+                            {"type":"file","name":"6afwltg79oh258uzfxgfu1bet.o"},
+                            {"type":"file","name":"6ekpe3btyu4jl4kncoxejohl5.o"},
+                            {"type":"file","name":"6ey1tgxi2bmurpxfvb88j4wd0.o"},
+                            {"type":"file","name":"6oqme38xjx8bi5jurnhs5w97e.o"},
+                            {"type":"file","name":"6s5iuoti63zutuvb1rm54pp55.o"},
+                            {"type":"file","name":"769ckp98m4kj5pbk06l0s10lm.o"},
+                            {"type":"file","name":"76rbynhby4cciv3d7ykigpsn4.o"},
+                            {"type":"file","name":"7a9tdla210l52ayxt2pjbln55.o"},
+                            {"type":"file","name":"7bsqd5n3r02a7we1wnsu0wp11.o"},
+                            {"type":"file","name":"7cinivuniz2cpx3jeb4k4gxiz.o"},
+                            {"type":"file","name":"7guojl7tb405xlvdghbwjx3xr.o"},
+                            {"type":"file","name":"7ox8al8x7pd7b1jryfi3dqkmu.o"},
+                            {"type":"file","name":"7r1kmd91jkvbqrwxpziv04s6l.o"},
+                            {"type":"file","name":"84rthe7cr3p1kmjbluxjvpdkr.o"},
+                            {"type":"file","name":"85yhs8bm3nf7ga9zz3v8ie9k9.o"},
+                            {"type":"file","name":"8d5ncwvqfxpjavuexa63f87rh.o"},
+                            {"type":"file","name":"8fvifhb7fdenox9dtkq7vtdzs.o"},
+                            {"type":"file","name":"8kcymiyg9vinyddki4o87bszs.o"},
+                            {"type":"file","name":"8qovhl3j8hmgkz8q4hukaenae.o"},
+                            {"type":"file","name":"8tdr16l00eacmlkr2a9wjfgnd.o"},
+                            {"type":"file","name":"8yev1urnp0gpa27alzsuq1zla.o"},
+                            {"type":"file","name":"8zbpsorqin29vyj6bkej42tjo.o"},
+                            {"type":"file","name":"9ftveytt1aq1kmf57saevljkm.o"},
+                            {"type":"file","name":"9q8w6ju634di9nwcq8indyw4o.o"},
+                            {"type":"file","name":"9vnq4awqhap3ohxi45o2sjcrc.o"},
+                            {"type":"file","name":"a0xjhzmmj82bd4aj62hn7a2v2.o"},
+                            {"type":"file","name":"a149ydcxrjf7s6ip2mq5wkp0z.o"},
+                            {"type":"file","name":"a1i0lglr9jvhzppv0howzfbbu.o"},
+                            {"type":"file","name":"a4ri1kclrira0fyebmc2mnbka.o"},
+                            {"type":"file","name":"a4v0th7fc1zjol0t5phssnz4b.o"},
+                            {"type":"file","name":"airsrqbc3afrfh76yfsuli75s.o"},
+                            {"type":"file","name":"aln34uo6imhf8wyez7k9049t6.o"},
+                            {"type":"file","name":"b3r6pvstydjuqsbmok73utyjj.o"},
+                            {"type":"file","name":"b4qyzme7aw61hd0j29mjya3jp.o"},
+                            {"type":"file","name":"bb887tzxiakz0kiahj4q7rq1y.o"},
+                            {"type":"file","name":"bcmzd7ovesbxtgpqia5rrhnau.o"},
+                            {"type":"file","name":"be7f32l6y3frgdzhzb7by39ha.o"},
+                            {"type":"file","name":"beaexh789i0266jww6gpdyg9j.o"},
+                            {"type":"file","name":"bl0uwo4y03kvpur6oeqrzptu7.o"},
+                            {"type":"file","name":"blcbe7qln4wiy5qef9b3xiy7p.o"},
+                            {"type":"file","name":"boxnugfeb6oqvsqp1bh08bw8h.o"},
+                            {"type":"file","name":"bpv8is586pp8ge49bw55le27m.o"},
+                            {"type":"file","name":"brry56rqerzf9v2vx8m4tilz7.o"},
+                            {"type":"file","name":"btg87jfjpuf52d3bwanrfeyo4.o"},
+                            {"type":"file","name":"c3t0zkgjlnrvxbo5ujup8gju6.o"},
+                            {"type":"file","name":"c3v89zg8bsh6m1egzuo2icuux.o"},
+                            {"type":"file","name":"c4sz9pf7qp1ptemcy8luw7gig.o"},
+                            {"type":"file","name":"c502ogsxskfprjos0d03pss22.o"},
+                            {"type":"file","name":"c51yw0vk40g1vyvwkxmqzmsle.o"},
+                            {"type":"file","name":"cdifodu22x8h98jb1ha9kjf5t.o"},
+                            {"type":"file","name":"cig6bt1pojmtqt7gv5q5b8qwu.o"},
+                            {"type":"file","name":"cuaz8vax01x1o960lfp2dkfye.o"},
+                            {"type":"file","name":"d1rika4sbtyz4fihgono6aj4x.o"},
+                            {"type":"file","name":"d80flys82q626l3g77b8cjtd8.o"},
+                            {"type":"file","name":"ddh2dtrqak6t3jfdllyqx0vt0.o"},
+                            {"type":"file","name":"dep-graph.bin"},
+                            {"type":"file","name":"di1maajpzjegxdfwwkmcfq7lf.o"},
+                            {"type":"file","name":"dof42gqjjw4bj4j1oocuqmtwb.o"},
+                            {"type":"file","name":"dqomilh2enfjuos0kwa0oyggj.o"},
+                            {"type":"file","name":"drxtopusssl3fyjf4zfldcn3i.o"},
+                            {"type":"file","name":"dsrs4em3ehgyobga0b2509lun.o"},
+                            {"type":"file","name":"e94nlg18nws0yaak78f0vi9i1.o"},
+                            {"type":"file","name":"eh3lpcoe6jddphbd60kj63t0z.o"},
+                            {"type":"file","name":"eivs88kn0wgbjm21n5jwzgafx.o"},
+                            {"type":"file","name":"et81u3tymjhlq01cfv30ys3et.o"},
+                            {"type":"file","name":"etfczssyjed3w2v5699uyiy1y.o"},
+                            {"type":"file","name":"eyurtxjtzdm4mm3kys6798l6t.o"},
+                            {"type":"file","name":"f50v1vpuweytheb85fe89111p.o"},
+                            {"type":"file","name":"query-cache.bin"},
+                            {"type":"file","name":"work-products.bin"}
+                        ]},
+                        {"type":"file","name":"s-hgur18ykft-13o75ja.lock"}
+                    ]},
+                    {"type":"directory","name":"ntiv-11ametrrnprbg","contents":[
+                        {"type":"directory","name":"s-hgulfzkp36-0w2shw1-0s0xw1ooyk8f7ws4xeb0qmv98","contents":[
+                            {"type":"file","name":"0casvrtv5ocr83zbjv9lmdw2f.o"},
+                            {"type":"file","name":"0gqiirf4i2o4mx4gh9nz7dz6e.o"},
+                            {"type":"file","name":"0k2in456wlaruvh33x7rct992.o"},
+                            {"type":"file","name":"0ngc6zhbj5tihelttllzwqm8i.o"},
+                            {"type":"file","name":"0q3eoli3rz8djzepb9bp2jqej.o"},
+                            {"type":"file","name":"0xzixlt8b2hm6m887xrzzzvlj.o"},
+                            {"type":"file","name":"18xinnrn6h7g5dry5jke8usvw.o"},
+                            {"type":"file","name":"1b8b44f65iwt0axm44uhl9tb2.o"},
+                            {"type":"file","name":"1crj28p70ecv0qv9ty5s0g8e9.o"},
+                            {"type":"file","name":"1vbgw11bpc9252gup1qwagyz8.o"},
+                            {"type":"file","name":"20vmfxavp3fgwukbqzlwqrkj7.o"},
+                            {"type":"file","name":"24gjpgngi8d1q9r7sagv94wqo.o"},
+                            {"type":"file","name":"2pvojbbnx7rubt87xb0oq4owa.o"},
+                            {"type":"file","name":"2s4eo0xxybvp43jqpedbt02qg.o"},
+                            {"type":"file","name":"3qxwt2kwbpnuciqb453pghmk1.o"},
+                            {"type":"file","name":"3tv3nbsj4o7o88kju252zbooi.o"},
+                            {"type":"file","name":"5axl5zq62wbwtsfo1htrhahb9.o"},
+                            {"type":"file","name":"5dbl7hdi5e829bg0r108q6y0l.o"},
+                            {"type":"file","name":"6lflphqqeljva73comhxutrpr.o"},
+                            {"type":"file","name":"6r4or53gxrd88q5y3g8u5kct6.o"},
+                            {"type":"file","name":"6z4rdelji66d3v4y8tb2ic5zl.o"},
+                            {"type":"file","name":"77qjbt1pihercgirp29jvdogi.o"},
+                            {"type":"file","name":"7clodrvgi7v9cq7tlvspmk5uk.o"},
+                            {"type":"file","name":"7hboolrka128slxxi8r60moxz.o"},
+                            {"type":"file","name":"7jz84gnijes0lrq9japvra8g2.o"},
+                            {"type":"file","name":"7mmhlzb62x3ybdggjq2hwsk0d.o"},
+                            {"type":"file","name":"7u2um4s80ek22db36h1pbuuva.o"},
+                            {"type":"file","name":"7w1e6i2j95g4ca4yeai8ug0kr.o"},
+                            {"type":"file","name":"7xiue3bqii15aqpa8vbek4snz.o"},
+                            {"type":"file","name":"8501wmjjnrref7e8f8isbw20a.o"},
+                            {"type":"file","name":"8ccnznc4jiha8ag65gh99fxzw.o"},
+                            {"type":"file","name":"8ivrgmxbbybbxxcq3p485u28o.o"},
+                            {"type":"file","name":"8l8h2ryydosfxzqzlihp3zd1a.o"},
+                            {"type":"file","name":"8ng6ize4eqfld1xjr4evmgtwe.o"},
+                            {"type":"file","name":"8nho39h67a79v8gqjjmyxqneh.o"},
+                            {"type":"file","name":"95587qf6k3c8gcg30x02drzqv.o"},
+                            {"type":"file","name":"96ukuws5oob55fk093jgf102u.o"},
+                            {"type":"file","name":"998d9276z3vsit0wajdqqcuhu.o"},
+                            {"type":"file","name":"9ex3hewawr49o4xt02w7kq6zy.o"},
+                            {"type":"file","name":"9g525ow31s3hw0gl1do611ujg.o"},
+                            {"type":"file","name":"9v0vj6irzl3do2xxveea8b8sx.o"},
+                            {"type":"file","name":"a41m3rai9hc0d7297bao1e3ck.o"},
+                            {"type":"file","name":"a41rgae9evx3bsfy1mkoibitd.o"},
+                            {"type":"file","name":"al2q5op8cabbyen8spx7130hc.o"},
+                            {"type":"file","name":"apsw2y0tte44j8blrwitf87sc.o"},
+                            {"type":"file","name":"asli32cydjk2jvvwkwmw8h6us.o"},
+                            {"type":"file","name":"avao0hx3y5zg1stfnkxf11ubt.o"},
+                            {"type":"file","name":"avrxf0k1yxk8soygvuvmzsl05.o"},
+                            {"type":"file","name":"aywhmfatwimgjrpdj76w5l5co.o"},
+                            {"type":"file","name":"bd0nuxkymjxldrd71zqjea39c.o"},
+                            {"type":"file","name":"bnvixtbw5oasbejj0mlexipch.o"},
+                            {"type":"file","name":"bv8693nuz5c2ut7d3xpecirvu.o"},
+                            {"type":"file","name":"bwg8lxkczplkgfchndwbxnrrk.o"},
+                            {"type":"file","name":"celr3birm3ex38em3iiuyw4ds.o"},
+                            {"type":"file","name":"cki77d7hnosriu01498wxfp8e.o"},
+                            {"type":"file","name":"cmjqdbh59yodw6l9et3ycqdt0.o"},
+                            {"type":"file","name":"d2q8t6e7yca7zjq4mz7rxjodg.o"},
+                            {"type":"file","name":"d505hdby24haqadnulw8ogj54.o"},
+                            {"type":"file","name":"dep-graph.bin"},
+                            {"type":"file","name":"dxfpkshm7y3647yoitdjf0fr9.o"},
+                            {"type":"file","name":"dz0s7ae57cw0x3eye8filg0wt.o"},
+                            {"type":"file","name":"dz87rrz8ixfsim9edk6kc65nw.o"},
+                            {"type":"file","name":"e0ondacmw74mj6ie5rfbnv7dj.o"},
+                            {"type":"file","name":"e8j2i48c7dj1q53exjkclbvdb.o"},
+                            {"type":"file","name":"ebm46lmkep71w4mbbj9wo5vci.o"},
+                            {"type":"file","name":"et77wk632dyfxxd8zlwz4n77j.o"},
+                            {"type":"file","name":"exx4xg9nl56w1i3tsy7seddv2.o"},
+                            {"type":"file","name":"f08o1ugtchph0ne16nbpekv3f.o"},
+                            {"type":"file","name":"f0o1rbgahfedxprcdg18ubnhu.o"},
+                            {"type":"file","name":"query-cache.bin"},
+                            {"type":"file","name":"work-products.bin"}
+                        ]},
+                        {"type":"file","name":"s-hgulfzkp36-0w2shw1.lock"},
+                        {"type":"directory","name":"s-hgum3mdefl-0jvcdxs-ef29zwsi2h4ez7inmu2i92z0q","contents":[
+                            {"type":"file","name":"0casvrtv5ocr83zbjv9lmdw2f.o"},
+                            {"type":"file","name":"0gqiirf4i2o4mx4gh9nz7dz6e.o"},
+                            {"type":"file","name":"0k2in456wlaruvh33x7rct992.o"},
+                            {"type":"file","name":"0ngc6zhbj5tihelttllzwqm8i.o"},
+                            {"type":"file","name":"0q3eoli3rz8djzepb9bp2jqej.o"},
+                            {"type":"file","name":"0xzixlt8b2hm6m887xrzzzvlj.o"},
+                            {"type":"file","name":"18xinnrn6h7g5dry5jke8usvw.o"},
+                            {"type":"file","name":"1b8b44f65iwt0axm44uhl9tb2.o"},
+                            {"type":"file","name":"1crj28p70ecv0qv9ty5s0g8e9.o"},
+                            {"type":"file","name":"1ms5wkrvda58agt8oqedgfucm.o"},
+                            {"type":"file","name":"1qjgy929g76nkza2pef80n6di.o"},
+                            {"type":"file","name":"1vbgw11bpc9252gup1qwagyz8.o"},
+                            {"type":"file","name":"20vmfxavp3fgwukbqzlwqrkj7.o"},
+                            {"type":"file","name":"24gjpgngi8d1q9r7sagv94wqo.o"},
+                            {"type":"file","name":"2pvojbbnx7rubt87xb0oq4owa.o"},
+                            {"type":"file","name":"2s4eo0xxybvp43jqpedbt02qg.o"},
+                            {"type":"file","name":"2v25ezmxbrnryoatkgglu1apj.o"},
+                            {"type":"file","name":"3bblanpaao5orf5kb6euirgj4.o"},
+                            {"type":"file","name":"3qxwt2kwbpnuciqb453pghmk1.o"},
+                            {"type":"file","name":"3tv3nbsj4o7o88kju252zbooi.o"},
+                            {"type":"file","name":"42ph073wtpcul9kw8c3jby902.o"},
+                            {"type":"file","name":"55k1oyw2a52250ejbrn26nii9.o"},
+                            {"type":"file","name":"55uilw6zf7b9i9jyb2dgj9twh.o"},
+                            {"type":"file","name":"5axl5zq62wbwtsfo1htrhahb9.o"},
+                            {"type":"file","name":"5dbl7hdi5e829bg0r108q6y0l.o"},
+                            {"type":"file","name":"6lflphqqeljva73comhxutrpr.o"},
+                            {"type":"file","name":"6r4or53gxrd88q5y3g8u5kct6.o"},
+                            {"type":"file","name":"6z4rdelji66d3v4y8tb2ic5zl.o"},
+                            {"type":"file","name":"77qjbt1pihercgirp29jvdogi.o"},
+                            {"type":"file","name":"7clodrvgi7v9cq7tlvspmk5uk.o"},
+                            {"type":"file","name":"7hboolrka128slxxi8r60moxz.o"},
+                            {"type":"file","name":"7jz84gnijes0lrq9japvra8g2.o"},
+                            {"type":"file","name":"7mmhlzb62x3ybdggjq2hwsk0d.o"},
+                            {"type":"file","name":"7u2um4s80ek22db36h1pbuuva.o"},
+                            {"type":"file","name":"7w1e6i2j95g4ca4yeai8ug0kr.o"},
+                            {"type":"file","name":"7xiue3bqii15aqpa8vbek4snz.o"},
+                            {"type":"file","name":"8501wmjjnrref7e8f8isbw20a.o"},
+                            {"type":"file","name":"8ccnznc4jiha8ag65gh99fxzw.o"},
+                            {"type":"file","name":"8ivrgmxbbybbxxcq3p485u28o.o"},
+                            {"type":"file","name":"8l8h2ryydosfxzqzlihp3zd1a.o"},
+                            {"type":"file","name":"8ng6ize4eqfld1xjr4evmgtwe.o"},
+                            {"type":"file","name":"8nho39h67a79v8gqjjmyxqneh.o"},
+                            {"type":"file","name":"95587qf6k3c8gcg30x02drzqv.o"},
+                            {"type":"file","name":"96ukuws5oob55fk093jgf102u.o"},
+                            {"type":"file","name":"998d9276z3vsit0wajdqqcuhu.o"},
+                            {"type":"file","name":"9ex3hewawr49o4xt02w7kq6zy.o"},
+                            {"type":"file","name":"9v0vj6irzl3do2xxveea8b8sx.o"},
+                            {"type":"file","name":"a41m3rai9hc0d7297bao1e3ck.o"},
+                            {"type":"file","name":"a41rgae9evx3bsfy1mkoibitd.o"},
+                            {"type":"file","name":"al2q5op8cabbyen8spx7130hc.o"},
+                            {"type":"file","name":"apsw2y0tte44j8blrwitf87sc.o"},
+                            {"type":"file","name":"asli32cydjk2jvvwkwmw8h6us.o"},
+                            {"type":"file","name":"avao0hx3y5zg1stfnkxf11ubt.o"},
+                            {"type":"file","name":"avrxf0k1yxk8soygvuvmzsl05.o"},
+                            {"type":"file","name":"aywhmfatwimgjrpdj76w5l5co.o"},
+                            {"type":"file","name":"bd0nuxkymjxldrd71zqjea39c.o"},
+                            {"type":"file","name":"bnvixtbw5oasbejj0mlexipch.o"},
+                            {"type":"file","name":"bv8693nuz5c2ut7d3xpecirvu.o"},
+                            {"type":"file","name":"bwg8lxkczplkgfchndwbxnrrk.o"},
+                            {"type":"file","name":"bwzqalc8azoy5vc5ullfsf22m.o"},
+                            {"type":"file","name":"celr3birm3ex38em3iiuyw4ds.o"},
+                            {"type":"file","name":"cki77d7hnosriu01498wxfp8e.o"},
+                            {"type":"file","name":"cmjqdbh59yodw6l9et3ycqdt0.o"},
+                            {"type":"file","name":"cmkuhecb4gq52t6kwqg6p8rus.o"},
+                            {"type":"file","name":"d2q8t6e7yca7zjq4mz7rxjodg.o"},
+                            {"type":"file","name":"d505hdby24haqadnulw8ogj54.o"},
+                            {"type":"file","name":"dep-graph.bin"},
+                            {"type":"file","name":"dxfpkshm7y3647yoitdjf0fr9.o"},
+                            {"type":"file","name":"dz0s7ae57cw0x3eye8filg0wt.o"},
+                            {"type":"file","name":"dz87rrz8ixfsim9edk6kc65nw.o"},
+                            {"type":"file","name":"e0ondacmw74mj6ie5rfbnv7dj.o"},
+                            {"type":"file","name":"e8j2i48c7dj1q53exjkclbvdb.o"},
+                            {"type":"file","name":"ebm46lmkep71w4mbbj9wo5vci.o"},
+                            {"type":"file","name":"et77wk632dyfxxd8zlwz4n77j.o"},
+                            {"type":"file","name":"evn2g5c95nf7klpvq0vmr1m30.o"},
+                            {"type":"file","name":"exx4xg9nl56w1i3tsy7seddv2.o"},
+                            {"type":"file","name":"f08o1ugtchph0ne16nbpekv3f.o"},
+                            {"type":"file","name":"f0o1rbgahfedxprcdg18ubnhu.o"},
+                            {"type":"file","name":"query-cache.bin"},
+                            {"type":"file","name":"work-products.bin"}
+                        ]},
+                        {"type":"file","name":"s-hgum3mdefl-0jvcdxs.lock"}
+                    ]}
+                ]},
+                {"type":"file","name":"nimg"},
+                {"type":"file","name":"nimg.d"},
+                {"type":"file","name":"ntiv"},
+                {"type":"file","name":"ntiv.d"}
+            ]},
+            {"type":"directory","name":"release","contents":[
+                {"type":"directory","name":"build","contents":[
+                    {"type":"directory","name":"anyhow-0a9a3792e6cf1c5e","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-0a9a3792e6cf1c5e"},
+                        {"type":"file","name":"build_script_build-0a9a3792e6cf1c5e.d"}
+                    ]},
+                    {"type":"directory","name":"anyhow-8b0371c829620592","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"crc32fast-21f1c43df92bef7c","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-21f1c43df92bef7c"},
+                        {"type":"file","name":"build_script_build-21f1c43df92bef7c.d"}
+                    ]},
+                    {"type":"directory","name":"crc32fast-677c97c459eea8f1","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"crossbeam-utils-7fc57901ed4d3142","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"crossbeam-utils-b8266e34c49da6ba","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-b8266e34c49da6ba"},
+                        {"type":"file","name":"build_script_build-b8266e34c49da6ba.d"}
+                    ]},
+                    {"type":"directory","name":"libc-42a6e4d068671c5b","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"libc-a2cb47bcdc98f299","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-a2cb47bcdc98f299"},
+                        {"type":"file","name":"build_script_build-a2cb47bcdc98f299.d"}
+                    ]},
+                    {"type":"directory","name":"num-traits-67206a530ba409b8","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-67206a530ba409b8"},
+                        {"type":"file","name":"build_script_build-67206a530ba409b8.d"}
+                    ]},
+                    {"type":"directory","name":"num-traits-f1b0cb2b9b4a58ae","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"parking_lot_core-0b03fb896c92b419","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-0b03fb896c92b419"},
+                        {"type":"file","name":"build_script_build-0b03fb896c92b419.d"}
+                    ]},
+                    {"type":"directory","name":"parking_lot_core-99a7d89a22bba268","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"paste-4874229827d9d887","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-4874229827d9d887"},
+                        {"type":"file","name":"build_script_build-4874229827d9d887.d"}
+                    ]},
+                    {"type":"directory","name":"paste-56b343fada2ea16d","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"proc-macro2-19140cac9bdf5714","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-19140cac9bdf5714"},
+                        {"type":"file","name":"build_script_build-19140cac9bdf5714.d"}
+                    ]},
+                    {"type":"directory","name":"proc-macro2-a6856280103adbb5","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"quote-7b72ecd7252c9680","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"quote-7e160683ca9df0e2","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-7e160683ca9df0e2"},
+                        {"type":"file","name":"build_script_build-7e160683ca9df0e2.d"}
+                    ]},
+                    {"type":"directory","name":"rayon-core-73da8fb03f05a6a4","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"rayon-core-ffe6a5776a192d5e","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-ffe6a5776a192d5e"},
+                        {"type":"file","name":"build_script_build-ffe6a5776a192d5e.d"}
+                    ]},
+                    {"type":"directory","name":"rustversion-42c5edbf1df9d182","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out","contents":[
+                            {"type":"file","name":"version.expr"}
+                        ]},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"rustversion-7dfae746fb36e175","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-7dfae746fb36e175"},
+                        {"type":"file","name":"build_script_build-7dfae746fb36e175.d"}
+                    ]},
+                    {"type":"directory","name":"signal-hook-47ac80f805a08a99","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-47ac80f805a08a99"},
+                        {"type":"file","name":"build_script_build-47ac80f805a08a99.d"}
+                    ]},
+                    {"type":"directory","name":"signal-hook-c14e570c6c732df8","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]},
+                    {"type":"directory","name":"zerocopy-b30701e8712926d3","contents":[
+                        {"type":"file","name":"build-script-build"},
+                        {"type":"file","name":"build_script_build-b30701e8712926d3"},
+                        {"type":"file","name":"build_script_build-b30701e8712926d3.d"}
+                    ]},
+                    {"type":"directory","name":"zerocopy-bc9ef1cac7e7c336","contents":[
+                        {"type":"file","name":"invoked.timestamp"},
+                        {"type":"directory","name":"out"},
+                        {"type":"file","name":"output"},
+                        {"type":"file","name":"root-output"},
+                        {"type":"file","name":"stderr"}
+                    ]}
+                ]},
+                {"type":"directory","name":"deps","contents":[
+                    {"type":"file","name":"adler2-e24a9b585c119d7a.d"},
+                    {"type":"file","name":"allocator_api2-6c81eea71a95ba7a.d"},
+                    {"type":"file","name":"anyhow-bbd2aadc0d9e4ddd.d"},
+                    {"type":"file","name":"autocfg-70ef7857e4f3f1b2.d"},
+                    {"type":"file","name":"bit_field-4e284957c0dbeb08.d"},
+                    {"type":"file","name":"bitflags-a7ca84a2995c653b.d"},
+                    {"type":"file","name":"bitflags-c4e614b7ab212f7f.d"},
+                    {"type":"file","name":"bytemuck-d16cd7a34cc60390.d"},
+                    {"type":"file","name":"byteorder-f491812cc5bf85ba.d"},
+                    {"type":"file","name":"cassowary-7b60a0498175b47b.d"},
+                    {"type":"file","name":"castaway-d063c0b1194ebd5a.d"},
+                    {"type":"file","name":"cfg_if-4bff7840193adde4.d"},
+                    {"type":"file","name":"color_quant-91987c3d6ae658cf.d"},
+                    {"type":"file","name":"compact_str-d8c69062069dd541.d"},
+                    {"type":"file","name":"crc32fast-7232c64756a8458a.d"},
+                    {"type":"file","name":"crossbeam_deque-a70e66a8f115d70d.d"},
+                    {"type":"file","name":"crossbeam_epoch-6ec472bb1fc0e539.d"},
+                    {"type":"file","name":"crossbeam_utils-d2676bdc32744a41.d"},
+                    {"type":"file","name":"crossterm-609e25bd340318c2.d"},
+                    {"type":"file","name":"either-fe92fea1e95f69cf.d"},
+                    {"type":"file","name":"equivalent-dfbfdc03581bdee0.d"},
+                    {"type":"file","name":"errno-5cc2b6815d2d59fb.d"},
+                    {"type":"file","name":"exr-0c9ac61051986da6.d"},
+                    {"type":"file","name":"fdeflate-79cdda3606449843.d"},
+                    {"type":"file","name":"flate2-5e85643218d85226.d"},
+                    {"type":"file","name":"foldhash-ee39c53ecd8809c5.d"},
+                    {"type":"file","name":"gif-136fe011e4ca812d.d"},
+                    {"type":"file","name":"half-3997c14697524a72.d"},
+                    {"type":"file","name":"hashbrown-a56440130220c6f6.d"},
+                    {"type":"file","name":"heck-2c02d18ce93dfac1.d"},
+                    {"type":"file","name":"image-3f5d40206fa3b233.d"},
+                    {"type":"file","name":"itertools-97ed029314317f09.d"},
+                    {"type":"file","name":"itertools-fef9a4af6dee410e.d"},
+                    {"type":"file","name":"itoa-329e27c8dc707384.d"},
+                    {"type":"file","name":"jpeg_decoder-a30245eb587f05e1.d"},
+                    {"type":"file","name":"lebe-fabde23044ae167f.d"},
+                    {"type":"file","name":"libadler2-e24a9b585c119d7a.rlib"},
+                    {"type":"file","name":"libadler2-e24a9b585c119d7a.rmeta"},
+                    {"type":"file","name":"liballocator_api2-6c81eea71a95ba7a.rlib"},
+                    {"type":"file","name":"liballocator_api2-6c81eea71a95ba7a.rmeta"},
+                    {"type":"file","name":"libanyhow-bbd2aadc0d9e4ddd.rlib"},
+                    {"type":"file","name":"libanyhow-bbd2aadc0d9e4ddd.rmeta"},
+                    {"type":"file","name":"libautocfg-70ef7857e4f3f1b2.rlib"},
+                    {"type":"file","name":"libautocfg-70ef7857e4f3f1b2.rmeta"},
+                    {"type":"file","name":"libbit_field-4e284957c0dbeb08.rlib"},
+                    {"type":"file","name":"libbit_field-4e284957c0dbeb08.rmeta"},
+                    {"type":"file","name":"libbitflags-a7ca84a2995c653b.rlib"},
+                    {"type":"file","name":"libbitflags-a7ca84a2995c653b.rmeta"},
+                    {"type":"file","name":"libbitflags-c4e614b7ab212f7f.rlib"},
+                    {"type":"file","name":"libbitflags-c4e614b7ab212f7f.rmeta"},
+                    {"type":"file","name":"libbytemuck-d16cd7a34cc60390.rlib"},
+                    {"type":"file","name":"libbytemuck-d16cd7a34cc60390.rmeta"},
+                    {"type":"file","name":"libbyteorder-f491812cc5bf85ba.rlib"},
+                    {"type":"file","name":"libbyteorder-f491812cc5bf85ba.rmeta"},
+                    {"type":"file","name":"libc-4f5273da61a985bb.d"},
+                    {"type":"file","name":"libcassowary-7b60a0498175b47b.rlib"},
+                    {"type":"file","name":"libcassowary-7b60a0498175b47b.rmeta"},
+                    {"type":"file","name":"libcastaway-d063c0b1194ebd5a.rlib"},
+                    {"type":"file","name":"libcastaway-d063c0b1194ebd5a.rmeta"},
+                    {"type":"file","name":"libcfg_if-4bff7840193adde4.rlib"},
+                    {"type":"file","name":"libcfg_if-4bff7840193adde4.rmeta"},
+                    {"type":"file","name":"libcolor_quant-91987c3d6ae658cf.rlib"},
+                    {"type":"file","name":"libcolor_quant-91987c3d6ae658cf.rmeta"},
+                    {"type":"file","name":"libcompact_str-d8c69062069dd541.rlib"},
+                    {"type":"file","name":"libcompact_str-d8c69062069dd541.rmeta"},
+                    {"type":"file","name":"libcrc32fast-7232c64756a8458a.rlib"},
+                    {"type":"file","name":"libcrc32fast-7232c64756a8458a.rmeta"},
+                    {"type":"file","name":"libcrossbeam_deque-a70e66a8f115d70d.rlib"},
+                    {"type":"file","name":"libcrossbeam_deque-a70e66a8f115d70d.rmeta"},
+                    {"type":"file","name":"libcrossbeam_epoch-6ec472bb1fc0e539.rlib"},
+                    {"type":"file","name":"libcrossbeam_epoch-6ec472bb1fc0e539.rmeta"},
+                    {"type":"file","name":"libcrossbeam_utils-d2676bdc32744a41.rlib"},
+                    {"type":"file","name":"libcrossbeam_utils-d2676bdc32744a41.rmeta"},
+                    {"type":"file","name":"libcrossterm-609e25bd340318c2.rlib"},
+                    {"type":"file","name":"libcrossterm-609e25bd340318c2.rmeta"},
+                    {"type":"file","name":"libeither-fe92fea1e95f69cf.rlib"},
+                    {"type":"file","name":"libeither-fe92fea1e95f69cf.rmeta"},
+                    {"type":"file","name":"libequivalent-dfbfdc03581bdee0.rlib"},
+                    {"type":"file","name":"libequivalent-dfbfdc03581bdee0.rmeta"},
+                    {"type":"file","name":"liberrno-5cc2b6815d2d59fb.rlib"},
+                    {"type":"file","name":"liberrno-5cc2b6815d2d59fb.rmeta"},
+                    {"type":"file","name":"libexr-0c9ac61051986da6.rlib"},
+                    {"type":"file","name":"libexr-0c9ac61051986da6.rmeta"},
+                    {"type":"file","name":"libfdeflate-79cdda3606449843.rlib"},
+                    {"type":"file","name":"libfdeflate-79cdda3606449843.rmeta"},
+                    {"type":"file","name":"libflate2-5e85643218d85226.rlib"},
+                    {"type":"file","name":"libflate2-5e85643218d85226.rmeta"},
+                    {"type":"file","name":"libfoldhash-ee39c53ecd8809c5.rlib"},
+                    {"type":"file","name":"libfoldhash-ee39c53ecd8809c5.rmeta"},
+                    {"type":"file","name":"libgif-136fe011e4ca812d.rlib"},
+                    {"type":"file","name":"libgif-136fe011e4ca812d.rmeta"},
+                    {"type":"file","name":"libhalf-3997c14697524a72.rlib"},
+                    {"type":"file","name":"libhalf-3997c14697524a72.rmeta"},
+                    {"type":"file","name":"libhashbrown-a56440130220c6f6.rlib"},
+                    {"type":"file","name":"libhashbrown-a56440130220c6f6.rmeta"},
+                    {"type":"file","name":"libheck-2c02d18ce93dfac1.rlib"},
+                    {"type":"file","name":"libheck-2c02d18ce93dfac1.rmeta"},
+                    {"type":"file","name":"libimage-3f5d40206fa3b233.rlib"},
+                    {"type":"file","name":"libimage-3f5d40206fa3b233.rmeta"},
+                    {"type":"file","name":"libitertools-97ed029314317f09.rlib"},
+                    {"type":"file","name":"libitertools-97ed029314317f09.rmeta"},
+                    {"type":"file","name":"libitertools-fef9a4af6dee410e.rlib"},
+                    {"type":"file","name":"libitertools-fef9a4af6dee410e.rmeta"},
+                    {"type":"file","name":"libitoa-329e27c8dc707384.rlib"},
+                    {"type":"file","name":"libitoa-329e27c8dc707384.rmeta"},
+                    {"type":"file","name":"libjpeg_decoder-a30245eb587f05e1.rlib"},
+                    {"type":"file","name":"libjpeg_decoder-a30245eb587f05e1.rmeta"},
+                    {"type":"file","name":"liblebe-fabde23044ae167f.rlib"},
+                    {"type":"file","name":"liblebe-fabde23044ae167f.rmeta"},
+                    {"type":"file","name":"liblibc-4f5273da61a985bb.rlib"},
+                    {"type":"file","name":"liblibc-4f5273da61a985bb.rmeta"},
+                    {"type":"file","name":"liblock_api-f8bf660c83ff6486.rlib"},
+                    {"type":"file","name":"liblock_api-f8bf660c83ff6486.rmeta"},
+                    {"type":"file","name":"liblog-fe6cda3917413272.rlib"},
+                    {"type":"file","name":"liblog-fe6cda3917413272.rmeta"},
+                    {"type":"file","name":"liblru-1892aa0ca82fcd40.rlib"},
+                    {"type":"file","name":"liblru-1892aa0ca82fcd40.rmeta"},
+                    {"type":"file","name":"libminiz_oxide-a46963e230eb351e.rlib"},
+                    {"type":"file","name":"libminiz_oxide-a46963e230eb351e.rmeta"},
+                    {"type":"file","name":"libmio-0c222a694de19def.rlib"},
+                    {"type":"file","name":"libmio-0c222a694de19def.rmeta"},
+                    {"type":"file","name":"libnum_traits-b9c111fb1c54c991.rlib"},
+                    {"type":"file","name":"libnum_traits-b9c111fb1c54c991.rmeta"},
+                    {"type":"file","name":"libparking_lot-a407bd3ad49395e7.rlib"},
+                    {"type":"file","name":"libparking_lot-a407bd3ad49395e7.rmeta"},
+                    {"type":"file","name":"libparking_lot_core-5167771fb7fcc560.rlib"},
+                    {"type":"file","name":"libparking_lot_core-5167771fb7fcc560.rmeta"},
+                    {"type":"file","name":"libpaste-de13993c1c33519a.so"},
+                    {"type":"file","name":"libpng-44af031975864028.rlib"},
+                    {"type":"file","name":"libpng-44af031975864028.rmeta"},
+                    {"type":"file","name":"libproc_macro2-4b40a23ab3cf0b45.rlib"},
+                    {"type":"file","name":"libproc_macro2-4b40a23ab3cf0b45.rmeta"},
+                    {"type":"file","name":"libqoi-8c336c82b78c86a1.rlib"},
+                    {"type":"file","name":"libqoi-8c336c82b78c86a1.rmeta"},
+                    {"type":"file","name":"libquote-81b6f50fa7dca96b.rlib"},
+                    {"type":"file","name":"libquote-81b6f50fa7dca96b.rmeta"},
+                    {"type":"file","name":"libratatui-2a092ce27ce6a6eb.rlib"},
+                    {"type":"file","name":"libratatui-2a092ce27ce6a6eb.rmeta"},
+                    {"type":"file","name":"librayon-3006f67998ec4acd.rlib"},
+                    {"type":"file","name":"librayon-3006f67998ec4acd.rmeta"},
+                    {"type":"file","name":"librayon_core-f9cc6805ff479701.rlib"},
+                    {"type":"file","name":"librayon_core-f9cc6805ff479701.rmeta"},
+                    {"type":"file","name":"librustversion-f2a84cd3eb5722a1.so"},
+                    {"type":"file","name":"libryu-0718f7401767b4c3.rlib"},
+                    {"type":"file","name":"libryu-0718f7401767b4c3.rmeta"},
+                    {"type":"file","name":"libscopeguard-da5f3845a0f0d959.rlib"},
+                    {"type":"file","name":"libscopeguard-da5f3845a0f0d959.rmeta"},
+                    {"type":"file","name":"libsignal_hook-85570218ad13180b.rlib"},
+                    {"type":"file","name":"libsignal_hook-85570218ad13180b.rmeta"},
+                    {"type":"file","name":"libsignal_hook_mio-014c2b3696376cd7.rlib"},
+                    {"type":"file","name":"libsignal_hook_mio-014c2b3696376cd7.rmeta"},
+                    {"type":"file","name":"libsignal_hook_registry-81583feacf833ba4.rlib"},
+                    {"type":"file","name":"libsignal_hook_registry-81583feacf833ba4.rmeta"},
+                    {"type":"file","name":"libsimd_adler32-64be43b3b67c2ab8.rlib"},
+                    {"type":"file","name":"libsimd_adler32-64be43b3b67c2ab8.rmeta"},
+                    {"type":"file","name":"libsmallvec-c3508f2ed21e7571.rlib"},
+                    {"type":"file","name":"libsmallvec-c3508f2ed21e7571.rmeta"},
+                    {"type":"file","name":"libstability-115db6c5fca4d36a.so"},
+                    {"type":"file","name":"libstatic_assertions-c9ed93098a4698db.rlib"},
+                    {"type":"file","name":"libstatic_assertions-c9ed93098a4698db.rmeta"},
+                    {"type":"file","name":"libstrum-a3e2e699231be055.rlib"},
+                    {"type":"file","name":"libstrum-a3e2e699231be055.rmeta"},
+                    {"type":"file","name":"libstrum_macros-b3f4966018ce9c57.so"},
+                    {"type":"file","name":"libsyn-4ba1e73513e29977.rlib"},
+                    {"type":"file","name":"libsyn-4ba1e73513e29977.rmeta"},
+                    {"type":"file","name":"libtiff-09c7a4fc54ec9a52.rlib"},
+                    {"type":"file","name":"libtiff-09c7a4fc54ec9a52.rmeta"},
+                    {"type":"file","name":"libunicode_ident-02eb017a9faa9e98.rlib"},
+                    {"type":"file","name":"libunicode_ident-02eb017a9faa9e98.rmeta"},
+                    {"type":"file","name":"libunicode_segmentation-d24fca273a5ac155.rlib"},
+                    {"type":"file","name":"libunicode_segmentation-d24fca273a5ac155.rmeta"},
+                    {"type":"file","name":"libunicode_truncate-4159e3be03d36463.rlib"},
+                    {"type":"file","name":"libunicode_truncate-4159e3be03d36463.rmeta"},
+                    {"type":"file","name":"libunicode_width-098ad7d446cec7aa.rlib"},
+                    {"type":"file","name":"libunicode_width-098ad7d446cec7aa.rmeta"},
+                    {"type":"file","name":"libweezl-0d785e3c71d0cb92.rlib"},
+                    {"type":"file","name":"libweezl-0d785e3c71d0cb92.rmeta"},
+                    {"type":"file","name":"libzerocopy-9700d0646836f6f6.rlib"},
+                    {"type":"file","name":"libzerocopy-9700d0646836f6f6.rmeta"},
+                    {"type":"file","name":"libzerocopy_derive-fb29fc6bef0d1637.so"},
+                    {"type":"file","name":"libzune_inflate-7fca02ad36b52700.rlib"},
+                    {"type":"file","name":"libzune_inflate-7fca02ad36b52700.rmeta"},
+                    {"type":"file","name":"lock_api-f8bf660c83ff6486.d"},
+                    {"type":"file","name":"log-fe6cda3917413272.d"},
+                    {"type":"file","name":"lru-1892aa0ca82fcd40.d"},
+                    {"type":"file","name":"miniz_oxide-a46963e230eb351e.d"},
+                    {"type":"file","name":"mio-0c222a694de19def.d"},
+                    {"type":"file","name":"nimg-100bf683a3ce80eb"},
+                    {"type":"file","name":"nimg-100bf683a3ce80eb.d"},
+                    {"type":"file","name":"ntiv-b188a3b845d853cc"},
+                    {"type":"file","name":"ntiv-b188a3b845d853cc.d"},
+                    {"type":"file","name":"num_traits-b9c111fb1c54c991.d"},
+                    {"type":"file","name":"parking_lot-a407bd3ad49395e7.d"},
+                    {"type":"file","name":"parking_lot_core-5167771fb7fcc560.d"},
+                    {"type":"file","name":"paste-de13993c1c33519a.d"},
+                    {"type":"file","name":"png-44af031975864028.d"},
+                    {"type":"file","name":"proc_macro2-4b40a23ab3cf0b45.d"},
+                    {"type":"file","name":"qoi-8c336c82b78c86a1.d"},
+                    {"type":"file","name":"quote-81b6f50fa7dca96b.d"},
+                    {"type":"file","name":"ratatui-2a092ce27ce6a6eb.d"},
+                    {"type":"file","name":"rayon-3006f67998ec4acd.d"},
+                    {"type":"file","name":"rayon_core-f9cc6805ff479701.d"},
+                    {"type":"file","name":"rustversion-f2a84cd3eb5722a1.d"},
+                    {"type":"file","name":"ryu-0718f7401767b4c3.d"},
+                    {"type":"file","name":"scopeguard-da5f3845a0f0d959.d"},
+                    {"type":"file","name":"signal_hook-85570218ad13180b.d"},
+                    {"type":"file","name":"signal_hook_mio-014c2b3696376cd7.d"},
+                    {"type":"file","name":"signal_hook_registry-81583feacf833ba4.d"},
+                    {"type":"file","name":"simd_adler32-64be43b3b67c2ab8.d"},
+                    {"type":"file","name":"smallvec-c3508f2ed21e7571.d"},
+                    {"type":"file","name":"stability-115db6c5fca4d36a.d"},
+                    {"type":"file","name":"static_assertions-c9ed93098a4698db.d"},
+                    {"type":"file","name":"strum-a3e2e699231be055.d"},
+                    {"type":"file","name":"strum_macros-b3f4966018ce9c57.d"},
+                    {"type":"file","name":"syn-4ba1e73513e29977.d"},
+                    {"type":"file","name":"tiff-09c7a4fc54ec9a52.d"},
+                    {"type":"file","name":"unicode_ident-02eb017a9faa9e98.d"},
+                    {"type":"file","name":"unicode_segmentation-d24fca273a5ac155.d"},
+                    {"type":"file","name":"unicode_truncate-4159e3be03d36463.d"},
+                    {"type":"file","name":"unicode_width-098ad7d446cec7aa.d"},
+                    {"type":"file","name":"weezl-0d785e3c71d0cb92.d"},
+                    {"type":"file","name":"zerocopy-9700d0646836f6f6.d"},
+                    {"type":"file","name":"zerocopy_derive-fb29fc6bef0d1637.d"},
+                    {"type":"file","name":"zune_inflate-7fca02ad36b52700.d"}
+                ]},
+                {"type":"directory","name":"examples"},
+                {"type":"directory","name":"incremental"},
+                {"type":"file","name":"nimg"},
+                {"type":"file","name":"nimg.d"}
+            ]}
+        ]}
+    ]}
+
+]
+;
+
+// 图标映射
+function getIcon(name, isDir) {
+    if (isDir) return '📁';
+    const ext = name.split('.').pop().toLowerCase();
+    const icons = {
+        'zip':'📦', 'rar':'📦', '7z':'📦', 'gz':'📦',
+        'mp4':'🎬', 'mkv':'🎬', 'avi':'🎬',
+        'mp3':'🎵', 'flac':'🎵', 'wav':'🎵',
+        'png':'🖼', 'jpg':'🖼', 'jpeg':'🖼', 'gif':'🖼', 'bmp':'🖼', 'webp':'🖼',
+        'pdf':'📕', 'txt':'📄', 'md':'📄',
+        'py':'🐍', 'js':'🌐', 'html':'🌐', 'css':'🎨',
+        'rs':'🦀', 'sh':'📜', 'rb':'📜', 'bat':'📜',
+    };
+    return icons[ext] || '📄';
+}
+
+// 排序函数：文件夹在前，文件在后
+function sortNodes(contents) {
+    if (!contents) return [];
+    return contents.sort((a, b) => {
+        const aIsDir = a.type === 'directory' ? 0 : 1;
+        const bIsDir = b.type === 'directory' ? 0 : 1;
+        if (aIsDir !== bIsDir) {
+            return aIsDir - bIsDir;
+        }
+        return a.name.localeCompare(b.name);
+    });
+}
+
+// 递归渲染树节点，path 为当前节点在文件系统中的相对路径（以 / 结尾表示目录）
+function renderTree(node, path = '') {
+    if (Array.isArray(node)) {
+        if (node.length > 0 && node[0].type === 'directory') {
+            return renderTree(node[0], path);
+        }
+        return '';
+    }
+    if (node.type === 'report') return '';
+
+    const name = node.name;
+    const isDir = node.type === 'directory';
+    const icon = getIcon(name, isDir);
+    const sizeStr = '';
+
+    let childrenHtml = '';
+    if (isDir && node.contents && node.contents.length > 0) {
+        const sortedContents = sortNodes(node.contents);
+        childrenHtml = '<ul>' + sortedContents.map(child => renderTree(child, path + name + '/')).join('') + '</ul>';
+    }
+
+    const entryClass = isDir ? 'folder-entry' : 'file-entry';
+
+    if (isDir) {
+        return `
+<li>
+    <details>
+        <summary class="entry ${entryClass}">
+            <span><span class="icon">${icon}</span>${name}</span>
+            <span class="file-info">${sizeStr}</span>
+        </summary>
+        ${childrenHtml}
+    </details>
+</li>`;
+    } else {
+        const filePath = encodeURI(path + name);
+        return `
+<li>
+    <a href="${filePath}" class="entry ${entryClass}">
+        <span><span class="icon">${icon}</span>${name}</span>
+        <span class="file-info">${sizeStr}</span>
+    </a>
+</li>`;
+    }
+}
+
+// 处理根节点
+let rootHtml = '';
+let folderCount = 0, fileCount = 0;
+
+if (Array.isArray(treeData) && treeData.length > 0 && treeData[0].type === 'directory') {
+    const rootNode = treeData[0];
+    if (rootNode.contents && rootNode.contents.length > 0) {
+        // 统计根目录下的文件夹和文件数量
+        rootNode.contents.forEach(item => {
+            if (item.type === 'directory') folderCount++;
+            else if (item.type === 'file') fileCount++;
+        });
+        const sortedContents = sortNodes(rootNode.contents);
+        rootHtml = '<ul>' + sortedContents.map(child => renderTree(child, '')).join('') + '</ul>';
+    } else {
+        rootHtml = '<ul></ul>';
+    }
+} else {
+    // 备用处理（理论上不会进入）
+    rootHtml = '<ul>' + renderTree(treeData, '') + '</ul>';
+    // 无法统计数量，保持默认0
+}
+document.getElementById('tree-container').innerHTML = rootHtml;
+
+// 更新统计信息
+document.getElementById('folder-count').textContent = folderCount;
+document.getElementById('file-count').textContent = fileCount;
+
+// ========== 夜间模式切换 ==========
+const themeToggle = document.getElementById('themeToggle');
+const body = document.body;
+
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'night') {
+    body.classList.add('night-mode');
+    themeToggle.textContent = '☀️ 日间模式';
+} else {
+    themeToggle.textContent = '🌙 夜间模式';
+}
+
+themeToggle.addEventListener('click', () => {
+    body.classList.toggle('night-mode');
+    const isNight = body.classList.contains('night-mode');
+    themeToggle.textContent = isNight ? '☀️ 日间模式' : '🌙 夜间模式';
+    localStorage.setItem('theme', isNight ? 'night' : 'day');
+});
+
+// ========== 应用 localStorage 其他设置 ==========
+(function() {
+    const settings = JSON.parse(localStorage.getItem("siteSettings") || "{}");
+    if (settings.bgUrl) {
+        document.body.style.background = `url('${settings.bgUrl}') fixed`;
+        document.body.style.backgroundSize = "cover";
+    }
+    if (settings.fontColor) document.body.style.color = settings.fontColor;
+    if (settings.fontSize) document.body.style.fontSize = settings.fontSize + "px";
+    if (settings.linkColor) {
+        document.querySelectorAll("a").forEach(a => a.style.color = settings.linkColor);
+    }
+    if (settings.folderWidth) {
+        document.querySelector(".container").style.maxWidth = settings.folderWidth + "px";
+    }
+    if (settings.folderHeight) {
+        document.querySelectorAll(".entry, summary").forEach(e => {
+            e.style.minHeight = settings.folderHeight + "px";
+        });
+    }
+    if (settings.folderColor) {
+        document.querySelectorAll(".entry, summary").forEach(e => {
+            e.style.background = settings.folderColor;
+        });
+    }
+    if (settings.bgColor) document.body.style.backgroundColor = settings.bgColor;
+    if (settings.bgOpacity) {
+        document.querySelector(".container").style.background =
+            `rgba(255,255,255,${settings.bgOpacity})`;
+    }
+})();
+</script>
+
+</body>
+</html>
